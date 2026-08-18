@@ -95,6 +95,11 @@ export class EnvironmentVariables {
   @IsString()
   CSRF_COOKIE_NAME!: string;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(8)
+  PASSWORD_MIN_LENGTH!: number;
+
   // OWASP second-recommended argon2id profile is 19456 KiB / t=2 / p=1.
   @Type(() => Number)
   @IsInt()

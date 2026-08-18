@@ -52,6 +52,9 @@ export const configuration = () => ({
     headerName: process.env.CSRF_HEADER_NAME,
     cookieName: process.env.CSRF_COOKIE_NAME,
   },
+  password: {
+    minLength: toNumber(process.env.PASSWORD_MIN_LENGTH),
+  },
   argon2: {
     memoryKib: toNumber(process.env.ARGON2_MEMORY_KIB),
     iterations: toNumber(process.env.ARGON2_ITERATIONS),

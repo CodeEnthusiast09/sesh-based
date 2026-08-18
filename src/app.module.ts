@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { configuration } from './config/configuration';
 import { validate } from './config/env.validation';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { validate } from './config/env.validation';
         logging: config.getOrThrow<boolean>('database.logging'),
       }),
     }),
+    AuthModule,
   ],
   controllers: [AppController],
 })
