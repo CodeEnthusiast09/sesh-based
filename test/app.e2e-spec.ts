@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { AppModule } from './../src/app.module';
-import { AllExceptionsFilter } from './../src/common/filters/all-exceptions.filter';
+import { configureApp } from './../src/app.setup';
 
 describe('Health (e2e)', () => {
   let app: INestApplication<App>;
@@ -15,7 +15,7 @@ describe('Health (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalFilters(new AllExceptionsFilter());
+    configureApp(app);
     await app.init();
   });
 

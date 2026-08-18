@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
@@ -7,8 +7,8 @@ import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 
 import { AppModule } from './../src/app.module';
+import { configureApp } from './../src/app.setup';
 import { ApiResponse } from './../src/common/interfaces/api-response.interface';
-import { AllExceptionsFilter } from './../src/common/filters/all-exceptions.filter';
 import { User } from './../src/modules/users/entities/user.entity';
 
 /** supertest types `body` as any; this narrows it to the response envelope. */
@@ -34,14 +34,7 @@ describe('Auth registration (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    app.useGlobalFilters(new AllExceptionsFilter());
+    configureApp(app);
     await app.init();
 
     users = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
