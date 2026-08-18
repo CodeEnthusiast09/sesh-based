@@ -8,7 +8,16 @@ import { Repository } from 'typeorm';
 
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/app.setup';
-import { hashSessionId } from './../src/modules/sessions/session-id';
+import { parseDurationSeconds } from './../src/config/duration';
+import {
+  generateCsrfToken,
+  generateSessionId,
+  hashSessionId,
+} from './../src/modules/sessions/session-id';
+import {
+  addSeconds,
+  type SessionRecord,
+} from './../src/modules/sessions/session.types';
 import {
   SESSION_STORE,
   type SessionStore,
@@ -191,6 +200,125 @@ describe('Session auth (e2e)', () => {
     expect(forged.body).toMatchObject({
       message: 'Session is invalid or has expired',
     });
+  });
+
+  it('rotates the session ID on login and retires the old one', async () => {
+    const first = await login().expect(200);
+    const firstId = hashSessionId(readSessionCookie(first) as string);
+
+    expect(await store.findById(firstId)).not.toBeNull();
+
+    // Log in again carrying the existing cookie, as a browser would.
+    const second = await request(app.getHttpServer())
+      .post('/auth/login')
+      .set('User-Agent', userAgent)
+      .set('Cookie', cookieHeader(first))
+      .send({ email, password })
+      .expect(200);
+
+    const secondId = hashSessionId(readSessionCookie(second) as string);
+
+    expect(secondId).not.toBe(firstId);
+    expect(await store.findById(firstId)).toBeNull();
+    expect(await store.findById(secondId)).not.toBeNull();
+  });
+
+  it('leaves other devices logged in when one of them logs in again', async () => {
+    const deviceA = await login().expect(200);
+    const deviceAId = hashSessionId(readSessionCookie(deviceA) as string);
+
+    // A second login with no cookie stands in for a different device.
+    const deviceB = await login().expect(200);
+    const deviceBId = hashSessionId(readSessionCookie(deviceB) as string);
+
+    expect(deviceBId).not.toBe(deviceAId);
+    expect(await store.findById(deviceAId)).not.toBeNull();
+    expect(await store.findById(deviceBId)).not.toBeNull();
+  });
+
+  it('uses the longer clocks when rememberMe is set', async () => {
+    const normal = await login().expect(200);
+    const remembered = await login({ rememberMe: true }).expect(200);
+
+    const normalSession = await store.findById(
+      hashSessionId(readSessionCookie(normal) as string),
+    );
+    const rememberedSession = await store.findById(
+      hashSessionId(readSessionCookie(remembered) as string),
+    );
+
+    expect(normalSession?.rememberMe).toBe(false);
+    expect(rememberedSession?.rememberMe).toBe(true);
+
+    const expectedNormal = parseDurationSeconds(
+      process.env.SESSION_ABSOLUTE_TTL as string,
+    );
+    const expectedRemembered = parseDurationSeconds(
+      process.env.SESSION_REMEMBER_ABSOLUTE_TTL as string,
+    );
+    const secondsFromNow = (date: Date): number =>
+      Math.round((date.getTime() - Date.now()) / 1000);
+
+    expect(
+      secondsFromNow(
+        (normalSession as NonNullable<typeof normalSession>).absoluteExpiresAt,
+      ),
+    ).toBeCloseTo(expectedNormal, -2);
+    expect(
+      secondsFromNow(
+        (rememberedSession as NonNullable<typeof rememberedSession>)
+          .absoluteExpiresAt,
+      ),
+    ).toBeCloseTo(expectedRemembered, -2);
+  });
+
+  it('slides the idle clock on activity without moving the absolute one', async () => {
+    const response = await login().expect(200);
+    const cookie = cookieHeader(response);
+    const id = hashSessionId(readSessionCookie(response) as string);
+
+    const before = await store.findById(id);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    const after = await store.findById(id);
+
+    expect(after?.idleExpiresAt.getTime()).toBeGreaterThan(
+      (before as NonNullable<typeof before>).idleExpiresAt.getTime(),
+    );
+    expect(after?.absoluteExpiresAt.getTime()).toBe(
+      (before as NonNullable<typeof before>).absoluteExpiresAt.getTime(),
+    );
+  });
+
+  it('rejects a session past its absolute cap even when the idle clock is healthy', async () => {
+    const owner = await users.findOneByOrFail({ email });
+    const { raw, hashed } = generateSessionId();
+    const now = new Date();
+
+    const expired: SessionRecord = {
+      id: hashed,
+      userId: owner.id,
+      csrfToken: generateCsrfToken(),
+      createdAt: addSeconds(now, -7200),
+      lastSeenAt: now,
+      // Idle clock is fine; only the absolute cap has passed.
+      idleExpiresAt: addSeconds(now, 1800),
+      absoluteExpiresAt: addSeconds(now, -1),
+      userAgent,
+      ip: '127.0.0.1',
+      rememberMe: false,
+    };
+
+    await store.create(expired);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', `${COOKIE_NAME}=${raw}`)
+      .expect(401);
   });
 
   it('gives the same answer for a wrong password and an unknown email', async () => {

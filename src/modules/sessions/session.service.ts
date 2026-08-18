@@ -85,10 +85,7 @@ export class SessionService {
     }
 
     const now = new Date();
-    const idleExpiresAt = addSeconds(
-      now,
-      this.ttlsFor(session.rememberMe).idleTtl,
-    );
+    const idleExpiresAt = this.slideIdleClock(session, now);
 
     await this.store.touch(id, now, idleExpiresAt);
 
@@ -108,6 +105,18 @@ export class SessionService {
 
   async revokeOthers(userId: string, currentId: string): Promise<number> {
     return this.store.deleteByUser(userId, currentId);
+  }
+
+  /**
+   * Slides the idle deadline forward, but never past the absolute one. Both
+   * clocks are checked on read regardless, so this is about keeping the stored
+   * value honest: idle_expires_at should never claim a time the session cannot
+   * actually reach.
+   */
+  private slideIdleClock(session: SessionRecord, now: Date): Date {
+    const slid = addSeconds(now, this.ttlsFor(session.rememberMe).idleTtl);
+
+    return slid < session.absoluteExpiresAt ? slid : session.absoluteExpiresAt;
   }
 
   private ttlsFor(rememberMe: boolean): {

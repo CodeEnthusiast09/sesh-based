@@ -49,6 +49,7 @@ export class AuthController {
     const result = await this.auth.login(dto, {
       userAgent: request.get('user-agent') ?? null,
       ip: request.ip ?? null,
+      currentSessionId: this.cookies.read(request),
     });
 
     this.cookies.set(response, result.rawId, result.maxAgeSeconds);

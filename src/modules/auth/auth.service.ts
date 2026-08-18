@@ -16,6 +16,8 @@ import { PasswordService } from './password.service';
 export interface LoginContext {
   userAgent: string | null;
   ip: string | null;
+  /** Raw session ID from the incoming cookie, if the caller already had one. */
+  currentSessionId?: string;
 }
 
 export interface LoginResult extends IssuedSession {
@@ -63,6 +65,14 @@ export class AuthService implements OnModuleInit {
       // One message for both cases, so the response cannot be used to test
       // whether an email is registered.
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    // Session fixation defence. A login always mints a brand new ID, so an
+    // attacker-planted one is never adopted; this additionally retires the
+    // session that arrived with the request instead of leaving it live. Only
+    // this session is touched, so other devices stay logged in.
+    if (context.currentSessionId !== undefined) {
+      await this.sessions.destroy(context.currentSessionId);
     }
 
     const issued = await this.sessions.issue(user.id, {
