@@ -17,6 +17,10 @@
     "incremental": true,
     "skipLibCheck": true,
     "strict": true,
+    // Entities and DTOs are populated by TypeORM and class-transformer after
+    // construction, which the compiler cannot see. Off so those classes read as
+    // plain declarations. Emits identical JS to the `!` form it replaces.
+    "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true
   }

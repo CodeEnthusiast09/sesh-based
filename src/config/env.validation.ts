@@ -20,101 +20,101 @@ const durationMessage = (property: string): string =>
 
 export class EnvironmentVariables {
   @IsIn(['development', 'test', 'production'])
-  NODE_ENV!: string;
+  NODE_ENV: string;
 
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  PORT!: number;
+  PORT: number;
 
   @IsString()
-  CORS_ORIGIN!: string;
+  CORS_ORIGIN: string;
 
   @IsString()
-  DB_HOST!: string;
+  DB_HOST: string;
 
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  DB_PORT!: number;
+  DB_PORT: number;
 
   @IsString()
-  DB_USER!: string;
+  DB_USER: string;
 
   @IsString()
   @IsNotEmpty()
-  DB_PASSWORD!: string;
+  DB_PASSWORD: string;
 
   @IsString()
-  DB_NAME!: string;
+  DB_NAME: string;
 
   @IsIn(BOOLEAN_VALUES)
-  DB_SYNCHRONIZE!: string;
+  DB_SYNCHRONIZE: string;
 
   @IsIn(BOOLEAN_VALUES)
-  DB_LOGGING!: string;
+  DB_LOGGING: string;
 
   @IsUrl({ protocols: ['redis', 'rediss'], require_tld: false })
-  REDIS_URL!: string;
+  REDIS_URL: string;
 
   @IsIn(['postgres', 'redis'])
-  SESSION_STORE!: string;
+  SESSION_STORE: string;
 
   @IsString()
-  SESSION_COOKIE_NAME!: string;
+  SESSION_COOKIE_NAME: string;
 
   @IsIn(BOOLEAN_VALUES)
-  SESSION_COOKIE_SECURE!: string;
+  SESSION_COOKIE_SECURE: string;
 
   @IsIn(['lax', 'strict', 'none'])
-  SESSION_COOKIE_SAMESITE!: string;
+  SESSION_COOKIE_SAMESITE: string;
 
   @IsOptional()
   @IsString()
   SESSION_COOKIE_DOMAIN?: string;
 
   @Matches(DURATION_REGEX, { message: durationMessage('SESSION_IDLE_TTL') })
-  SESSION_IDLE_TTL!: string;
+  SESSION_IDLE_TTL: string;
 
   @Matches(DURATION_REGEX, { message: durationMessage('SESSION_ABSOLUTE_TTL') })
-  SESSION_ABSOLUTE_TTL!: string;
+  SESSION_ABSOLUTE_TTL: string;
 
   @Matches(DURATION_REGEX, {
     message: durationMessage('SESSION_REMEMBER_IDLE_TTL'),
   })
-  SESSION_REMEMBER_IDLE_TTL!: string;
+  SESSION_REMEMBER_IDLE_TTL: string;
 
   @Matches(DURATION_REGEX, {
     message: durationMessage('SESSION_REMEMBER_ABSOLUTE_TTL'),
   })
-  SESSION_REMEMBER_ABSOLUTE_TTL!: string;
+  SESSION_REMEMBER_ABSOLUTE_TTL: string;
 
   @IsString()
-  CSRF_HEADER_NAME!: string;
+  CSRF_HEADER_NAME: string;
 
   @IsString()
-  CSRF_COOKIE_NAME!: string;
+  CSRF_COOKIE_NAME: string;
 
   @Type(() => Number)
   @IsInt()
   @Min(8)
-  PASSWORD_MIN_LENGTH!: number;
+  PASSWORD_MIN_LENGTH: number;
 
   // OWASP second-recommended argon2id profile is 19456 KiB / t=2 / p=1.
   @Type(() => Number)
   @IsInt()
   @Min(8192)
-  ARGON2_MEMORY_KIB!: number;
+  ARGON2_MEMORY_KIB: number;
 
   @Type(() => Number)
   @IsInt()
   @Min(2)
-  ARGON2_ITERATIONS!: number;
+  ARGON2_ITERATIONS: number;
 
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  ARGON2_PARALLELISM!: number;
+  ARGON2_PARALLELISM: number;
 }
 
 /**

@@ -29,7 +29,7 @@ export class AuthService implements OnModuleInit {
    * same time as a wrong password. Without it, the response time alone reveals
    * which emails are registered.
    */
-  private decoyHash!: string;
+  private decoyHash: string;
 
   constructor(
     private readonly users: UsersService,

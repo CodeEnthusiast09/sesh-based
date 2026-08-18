@@ -4,9 +4,9 @@ import { MinLengthFromEnv } from '../../../common/validators/min-length-from-env
 
 export class RegisterDto {
   @IsEmail()
-  email!: string;
+  email: string;
 
   @IsString()
   @MinLengthFromEnv('PASSWORD_MIN_LENGTH')
-  password!: string;
+  password: string;
 }

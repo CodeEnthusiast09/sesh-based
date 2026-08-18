@@ -14,38 +14,38 @@ import { User } from '../../users/entities/user.entity';
 export class SessionEntity {
   /** SHA-256 hex of the raw session ID. The raw value is never stored. */
   @PrimaryColumn({ type: 'text' })
-  id!: string;
+  id: string;
 
   @Index()
   @Column({ name: 'user_id', type: 'uuid' })
-  userId!: string;
+  userId: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
-  user!: User;
+  user: User;
 
   @Column({ name: 'csrf_token', type: 'text' })
-  csrfToken!: string;
+  csrfToken: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt!: Date;
+  createdAt: Date;
 
   @Column({ name: 'last_seen_at', type: 'timestamptz' })
-  lastSeenAt!: Date;
+  lastSeenAt: Date;
 
   @Index()
   @Column({ name: 'idle_expires_at', type: 'timestamptz' })
-  idleExpiresAt!: Date;
+  idleExpiresAt: Date;
 
   @Column({ name: 'absolute_expires_at', type: 'timestamptz' })
-  absoluteExpiresAt!: Date;
+  absoluteExpiresAt: Date;
 
   @Column({ name: 'user_agent', type: 'text', nullable: true })
-  userAgent!: string | null;
+  userAgent: string | null;
 
   @Column({ name: 'ip', type: 'text', nullable: true })
-  ip!: string | null;
+  ip: string | null;
 
   @Column({ name: 'remember_me', type: 'boolean', default: false })
-  rememberMe!: boolean;
+  rememberMe: boolean;
 }
