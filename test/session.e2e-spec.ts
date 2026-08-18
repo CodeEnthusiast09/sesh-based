@@ -8,8 +8,11 @@ import { Repository } from 'typeorm';
 
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/app.setup';
-import { SessionEntity } from './../src/modules/sessions/entities/session.entity';
 import { hashSessionId } from './../src/modules/sessions/session-id';
+import {
+  SESSION_STORE,
+  type SessionStore,
+} from './../src/modules/sessions/stores/session-store.interface';
 import { User } from './../src/modules/users/entities/user.entity';
 
 const COOKIE_NAME = process.env.SESSION_COOKIE_NAME ?? 'sid';
@@ -45,7 +48,9 @@ const cookieHeader = (response: request.Response): string =>
 describe('Session auth (e2e)', () => {
   let app: INestApplication<App>;
   let users: Repository<User>;
-  let sessions: Repository<SessionEntity>;
+  // Asserted through the store interface, not the Postgres repository, so the
+  // same suite proves both backends behave identically.
+  let store: SessionStore;
 
   const password = 'correct-horse-battery';
   const email = `session-${randomUUID()}@task141.mil`;
@@ -68,9 +73,7 @@ describe('Session auth (e2e)', () => {
     await app.init();
 
     users = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    sessions = moduleFixture.get<Repository<SessionEntity>>(
-      getRepositoryToken(SessionEntity),
-    );
+    store = moduleFixture.get<SessionStore>(SESSION_STORE);
 
     await request(app.getHttpServer())
       .post('/auth/register')
@@ -79,7 +82,13 @@ describe('Session auth (e2e)', () => {
   });
 
   afterAll(async () => {
-    // Sessions go with the user via ON DELETE CASCADE.
+    // Postgres cascades from users; Redis does not, so revoke explicitly.
+    const owner = await users.findOneBy({ email });
+
+    if (owner) {
+      await store.deleteByUser(owner.id);
+    }
+
     await users.delete({ email });
     await app.close();
   });
@@ -108,26 +117,26 @@ describe('Session auth (e2e)', () => {
 
     expect(rawId).toBeDefined();
 
-    const stored = await sessions.findOneByOrFail({
-      id: hashSessionId(rawId as string),
-    });
+    const stored = await store.findById(hashSessionId(rawId as string));
 
-    expect(stored.id).not.toBe(rawId);
-    expect(stored.id).toHaveLength(64);
+    expect(stored).not.toBeNull();
+    expect(stored?.id).not.toBe(rawId);
+    expect(stored?.id).toHaveLength(64);
   });
 
   it('sets an idle clock that is earlier than the absolute clock', async () => {
     const response = await login().expect(200);
-    const stored = await sessions.findOneByOrFail({
-      id: hashSessionId(readSessionCookie(response) as string),
-    });
-
-    expect(stored.idleExpiresAt.getTime()).toBeGreaterThan(Date.now());
-    expect(stored.absoluteExpiresAt.getTime()).toBeGreaterThan(
-      stored.idleExpiresAt.getTime(),
+    const stored = await store.findById(
+      hashSessionId(readSessionCookie(response) as string),
     );
-    expect(stored.rememberMe).toBe(false);
-    expect(stored.userAgent).toBe(userAgent);
+
+    expect(stored).not.toBeNull();
+    expect(stored?.idleExpiresAt.getTime()).toBeGreaterThan(Date.now());
+    expect(stored?.absoluteExpiresAt.getTime()).toBeGreaterThan(
+      (stored as NonNullable<typeof stored>).idleExpiresAt.getTime(),
+    );
+    expect(stored?.rememberMe).toBe(false);
+    expect(stored?.userAgent).toBe(userAgent);
   });
 
   it('accepts /auth/me with the cookie and logs out cleanly', async () => {
@@ -154,14 +163,14 @@ describe('Session auth (e2e)', () => {
     const response = await login().expect(200);
     const id = hashSessionId(readSessionCookie(response) as string);
 
-    expect(await sessions.existsBy({ id })).toBe(true);
+    expect(await store.findById(id)).not.toBeNull();
 
     await request(app.getHttpServer())
       .post('/auth/logout')
       .set('Cookie', cookieHeader(response))
       .expect(200);
 
-    expect(await sessions.existsBy({ id })).toBe(false);
+    expect(await store.findById(id)).toBeNull();
   });
 
   it('distinguishes a missing cookie from a forged one', async () => {
