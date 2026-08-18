@@ -47,6 +47,9 @@ export const configuration = () => ({
     rememberAbsoluteTtlSeconds: parseDurationSeconds(
       process.env.SESSION_REMEMBER_ABSOLUTE_TTL as string,
     ),
+    cleanupIntervalSeconds: parseDurationSeconds(
+      process.env.SESSION_CLEANUP_INTERVAL as string,
+    ),
   },
   csrf: {
     headerName: process.env.CSRF_HEADER_NAME,

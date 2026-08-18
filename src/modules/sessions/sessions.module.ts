@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { UsersModule } from '../users/users.module';
 import { SessionEntity } from './entities/session.entity';
+import { SessionCleanupService } from './session-cleanup.service';
 import { SessionCookieService } from './session-cookie.service';
 import { SessionService } from './session.service';
 import { PostgresSessionStore } from './stores/postgres-session.store';
@@ -58,6 +59,7 @@ const sessionStoreProvider: Provider = {
     sessionStoreProvider,
     SessionService,
     SessionCookieService,
+    SessionCleanupService,
     SessionGuard,
   ],
   exports: [SessionService, SessionCookieService, SessionGuard],

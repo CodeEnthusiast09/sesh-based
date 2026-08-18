@@ -89,6 +89,11 @@ export class EnvironmentVariables {
   })
   SESSION_REMEMBER_ABSOLUTE_TTL: string;
 
+  @Matches(DURATION_REGEX, {
+    message: durationMessage('SESSION_CLEANUP_INTERVAL'),
+  })
+  SESSION_CLEANUP_INTERVAL: string;
+
   @IsString()
   CSRF_HEADER_NAME: string;
 

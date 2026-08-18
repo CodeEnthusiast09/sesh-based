@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
@@ -29,6 +30,7 @@ import { AuthModule } from './modules/auth/auth.module';
         logging: config.getOrThrow<boolean>('database.logging'),
       }),
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
   ],
   controllers: [AppController],
