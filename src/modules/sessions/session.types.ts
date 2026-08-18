@@ -26,3 +26,37 @@ export const isExpired = (session: SessionRecord, now: Date): boolean =>
 
 export const addSeconds = (from: Date, seconds: number): Date =>
   new Date(from.getTime() + seconds * 1000);
+
+/**
+ * What a session looks like over the wire. The csrfToken is deliberately absent:
+ * listing your devices must never hand out another session's CSRF token.
+ *
+ * `id` is the stored SHA-256, which is safe to expose because it cannot be
+ * reversed into the cookie value that would actually authenticate.
+ */
+export interface PublicSession {
+  id: string;
+  current: boolean;
+  createdAt: Date;
+  lastSeenAt: Date;
+  idleExpiresAt: Date;
+  absoluteExpiresAt: Date;
+  userAgent: string | null;
+  ip: string | null;
+  rememberMe: boolean;
+}
+
+export const toPublicSession = (
+  session: SessionRecord,
+  currentId: string,
+): PublicSession => ({
+  id: session.id,
+  current: session.id === currentId,
+  createdAt: session.createdAt,
+  lastSeenAt: session.lastSeenAt,
+  idleExpiresAt: session.idleExpiresAt,
+  absoluteExpiresAt: session.absoluteExpiresAt,
+  userAgent: session.userAgent,
+  ip: session.ip,
+  rememberMe: session.rememberMe,
+});

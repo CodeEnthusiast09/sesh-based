@@ -9,6 +9,7 @@ import { SessionEntity } from './entities/session.entity';
 import { SessionCleanupService } from './session-cleanup.service';
 import { SessionCookieService } from './session-cookie.service';
 import { SessionService } from './session.service';
+import { SessionsController } from './sessions.controller';
 import { PostgresSessionStore } from './stores/postgres-session.store';
 import {
   createRedisClient,
@@ -55,6 +56,7 @@ const sessionStoreProvider: Provider = {
 
 @Module({
   imports: [TypeOrmModule.forFeature([SessionEntity]), UsersModule],
+  controllers: [SessionsController],
   providers: [
     sessionStoreProvider,
     SessionService,

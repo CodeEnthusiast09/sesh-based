@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { PublicUser, toPublicUser } from '../users/user.types';
@@ -105,6 +105,22 @@ export class SessionService {
 
   async revokeOthers(userId: string, currentId: string): Promise<number> {
     return this.store.deleteByUser(userId, currentId);
+  }
+
+  /**
+   * Ownership is checked before deleting, otherwise anyone could revoke anyone
+   * else's session by guessing an ID. A session owned by someone else reports
+   * as not found rather than forbidden, so the response cannot be used to test
+   * whether an ID exists.
+   */
+  async revokeById(userId: string, sessionId: string): Promise<void> {
+    const session = await this.store.findById(sessionId);
+
+    if (!session || session.userId !== userId) {
+      throw new NotFoundException('Session not found');
+    }
+
+    await this.store.delete(sessionId);
   }
 
   /**
