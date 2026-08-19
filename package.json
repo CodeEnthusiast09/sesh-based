@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "test:e2e:postgres": "SESSION_STORE=postgres jest --config ./test/jest-e2e.json",
     "test:e2e:redis": "SESSION_STORE=redis jest --config ./test/jest-e2e.json",
-    "test:e2e:stores": "npm run test:e2e:postgres && npm run test:e2e:redis"
+    "test:e2e:stores": "npm run test:e2e:postgres && npm run test:e2e:redis",
+    "smoke": "./scripts/smoke.sh"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
