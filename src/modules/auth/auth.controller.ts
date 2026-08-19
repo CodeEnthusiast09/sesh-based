@@ -9,6 +9,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
 import { CurrentSession } from '../../common/decorators/current-session.decorator';
@@ -34,6 +35,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ auth: {} })
   @HttpCode(HttpStatus.CREATED)
   async register(@Body() dto: RegisterDto): Promise<ApiResponse<PublicUser>> {
     const user = await this.auth.register(dto);
@@ -41,7 +43,10 @@ export class AuthController {
     return successResponse('Registration successful', user);
   }
 
+  // The brute-force and credential-stuffing target, so it gets the strict
+  // limiter rather than the generous default.
   @Post('login')
+  @Throttle({ auth: {} })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,

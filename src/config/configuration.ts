@@ -51,6 +51,14 @@ export const configuration = () => ({
       process.env.SESSION_CLEANUP_INTERVAL as string,
     ),
   },
+  rateLimit: {
+    ttlSeconds: parseDurationSeconds(process.env.RATE_LIMIT_TTL as string),
+    max: toNumber(process.env.RATE_LIMIT_MAX),
+    authTtlSeconds: parseDurationSeconds(
+      process.env.AUTH_RATE_LIMIT_TTL as string,
+    ),
+    authMax: toNumber(process.env.AUTH_RATE_LIMIT_MAX),
+  },
   csrf: {
     headerName: process.env.CSRF_HEADER_NAME,
     cookieName: process.env.CSRF_COOKIE_NAME,

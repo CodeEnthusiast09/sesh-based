@@ -46,6 +46,7 @@ clock has passed, confirm the owner still exists, slide the idle clock.
 | CSRF guard | `common/guards/csrf.guard.ts` | `RequireCSRF` in `internal/session/middleware.go` |
 | Password hashing | `modules/auth/password.service.ts` | `internal/auth/password.go` |
 | Expired-row sweep | `session-cleanup.service.ts` | `internal/session/cleanup.go` |
+| Rate limiting | `@nestjs/throttler` in `app.module.ts` | `internal/middleware/ratelimit.go` |
 
 ## Where they genuinely differ, and why
 
@@ -112,11 +113,27 @@ means the plumbing only. Every part that is actually cryptography uses vetted
 code: argon2id for passwords, the platform CSPRNG for IDs, constant-time
 comparison for tokens.
 
+## Rate limiting
+
+Two limiters in each project: a generous default on every route, and a much
+stricter one on `/auth/register` and `/auth/login`, which are the brute-force and
+credential-stuffing targets. All four values come from env. Both return the same
+envelope with `error: "TooManyRequests"`.
+
+Nest uses `@nestjs/throttler` with a global `APP_GUARD`, so a new route is limited
+by default rather than by someone remembering. Go uses a hand-rolled fixed-window
+counter keyed by client IP, with a background sweep evicting finished windows so
+the map cannot grow forever.
+
+**Both are in-memory**, so each instance counts only its own traffic: behind a
+load balancer the effective limit is the configured value times the instance
+count. Moving the counters into Redis is what fixes that, and is worth doing
+before either is load balanced.
+
 ## Known gaps in both
 
-- **No rate limiting** on login or registration. Credential stuffing and password
-  brute force are both unthrottled. This is the largest remaining hole.
 - Schema is created by `synchronize` / `AutoMigrate`, which is a development
   convenience. Deployed environments need versioned migrations.
 - `X-Forwarded-For` is not trusted, so the recorded IP is the proxy's address
-  behind a load balancer until that is configured.
+  behind a load balancer until that is configured. That also means the rate
+  limiter would key every request behind a proxy to the same bucket.

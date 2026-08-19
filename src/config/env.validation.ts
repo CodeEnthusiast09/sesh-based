@@ -94,6 +94,22 @@ export class EnvironmentVariables {
   })
   SESSION_CLEANUP_INTERVAL: string;
 
+  @Matches(DURATION_REGEX, { message: durationMessage('RATE_LIMIT_TTL') })
+  RATE_LIMIT_TTL: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  RATE_LIMIT_MAX: number;
+
+  @Matches(DURATION_REGEX, { message: durationMessage('AUTH_RATE_LIMIT_TTL') })
+  AUTH_RATE_LIMIT_TTL: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  AUTH_RATE_LIMIT_MAX: number;
+
   @IsString()
   CSRF_HEADER_NAME: string;
 

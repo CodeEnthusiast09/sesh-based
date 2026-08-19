@@ -17,11 +17,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:e2e:postgres": "SESSION_STORE=postgres jest --config ./test/jest-e2e.json",
-    "test:e2e:redis": "SESSION_STORE=redis jest --config ./test/jest-e2e.json",
-    "test:e2e:stores": "npm run test:e2e:postgres && npm run test:e2e:redis",
-    "smoke": "./scripts/smoke.sh"
+    "test:e2e": "RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
+    "test:e2e:postgres": "SESSION_STORE=postgres RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
+    "test:e2e:redis": "SESSION_STORE=redis RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
+    "test:e2e:stores": "npm run test:e2e:postgres && npm run test:e2e:redis && npm run test:e2e:throttle",
+    "smoke": "./scripts/smoke.sh",
+    "test:e2e:throttle": "RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=3 jest --config ./test/jest-e2e.json --testPathPatterns \"throttle\""
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -29,6 +30,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/schedule": "^6.1.3",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.3",
     "argon2": "^0.45.1",
     "class-transformer": "^0.5.1",

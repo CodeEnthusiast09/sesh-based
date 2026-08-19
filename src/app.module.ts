@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
@@ -31,8 +33,32 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        // Default message leaks the exception class name to the client.
+        errorMessage: 'Too many requests, please try again later',
+        throttlers: [
+          {
+            name: 'default',
+            ttl: config.getOrThrow<number>('rateLimit.ttlSeconds') * 1000,
+            limit: config.getOrThrow<number>('rateLimit.max'),
+          },
+          // Credential endpoints opt into this one with @Throttle.
+          {
+            name: 'auth',
+            ttl: config.getOrThrow<number>('rateLimit.authTtlSeconds') * 1000,
+            limit: config.getOrThrow<number>('rateLimit.authMax'),
+          },
+        ],
+      }),
+    }),
     AuthModule,
   ],
   controllers: [AppController],
+  providers: [
+    // Global so a new route is rate limited by default rather than by memory.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}
