@@ -39,6 +39,16 @@ const sessionIdOf = (response: request.Response): string => {
   return hashSessionId(raw as string);
 };
 
+const CSRF_COOKIE = process.env.CSRF_COOKIE_NAME ?? 'csrf_token';
+const CSRF_HEADER = process.env.CSRF_HEADER_NAME ?? 'x-csrf-token';
+
+/** The CSRF cookie is readable on purpose, so the client can echo it in a header. */
+const csrfTokenOf = (response: request.Response): string =>
+  setCookieHeaders(response)
+    .find((value) => value.startsWith(`${CSRF_COOKIE}=`))
+    ?.split(';')[0]
+    .split('=')[1] as string;
+
 describe('Session management (e2e)', () => {
   let app: INestApplication<App>;
   let users: Repository<User>;
@@ -114,6 +124,7 @@ describe('Session management (e2e)', () => {
     await request(app.getHttpServer())
       .delete(`/sessions/${sessionIdOf(deviceB)}`)
       .set('Cookie', cookieHeader(deviceA))
+      .set(CSRF_HEADER, csrfTokenOf(deviceA))
       .expect(200);
 
     await request(app.getHttpServer())
@@ -134,6 +145,7 @@ describe('Session management (e2e)', () => {
     const response = await request(app.getHttpServer())
       .delete(`/sessions/${sessionIdOf(victim)}`)
       .set('Cookie', cookieHeader(attacker))
+      .set(CSRF_HEADER, csrfTokenOf(attacker))
       .expect(404);
 
     // Reported as not found rather than forbidden, so the response cannot be
@@ -154,6 +166,7 @@ describe('Session management (e2e)', () => {
     const response = await request(app.getHttpServer())
       .delete('/sessions')
       .set('Cookie', cookieHeader(keep))
+      .set(CSRF_HEADER, csrfTokenOf(keep))
       .expect(200);
 
     const body = response.body as ApiResponse<{ revoked: number }>;
@@ -181,6 +194,7 @@ describe('Session management (e2e)', () => {
     const response = await request(app.getHttpServer())
       .delete(`/sessions/${sessionIdOf(device)}`)
       .set('Cookie', cookieHeader(device))
+      .set(CSRF_HEADER, csrfTokenOf(device))
       .expect(200);
 
     expect(cookieHeader(response)).toContain(`${COOKIE_NAME}=`);

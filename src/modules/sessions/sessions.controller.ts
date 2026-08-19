@@ -12,6 +12,7 @@ import type { Response } from 'express';
 
 import { CurrentSession } from '../../common/decorators/current-session.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { CsrfGuard } from '../../common/guards/csrf.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
 import type { ApiResponse } from '../../common/interfaces/api-response.interface';
 import { successResponse } from '../../common/utils/response.helper';
@@ -22,7 +23,8 @@ import { toPublicSession } from './session.types';
 import type { PublicSession, SessionRecord } from './session.types';
 
 @Controller('sessions')
-@UseGuards(SessionGuard)
+// CsrfGuard exempts safe methods itself, so GET is unaffected.
+@UseGuards(SessionGuard, CsrfGuard)
 export class SessionsController {
   constructor(
     private readonly sessions: SessionService,

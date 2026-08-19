@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { getRepositoryToken, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
+import { CsrfGuard } from '../../common/guards/csrf.guard';
 import { SessionGuard } from '../../common/guards/session.guard';
 import { UsersModule } from '../users/users.module';
 import { SessionEntity } from './entities/session.entity';
@@ -63,7 +64,8 @@ const sessionStoreProvider: Provider = {
     SessionCookieService,
     SessionCleanupService,
     SessionGuard,
+    CsrfGuard,
   ],
-  exports: [SessionService, SessionCookieService, SessionGuard],
+  exports: [SessionService, SessionCookieService, SessionGuard, CsrfGuard],
 })
 export class SessionsModule {}

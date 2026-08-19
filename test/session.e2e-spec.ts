@@ -54,6 +54,16 @@ const cookieHeader = (response: request.Response): string =>
     .map((value) => value.split(';')[0])
     .join('; ');
 
+const CSRF_COOKIE = process.env.CSRF_COOKIE_NAME ?? 'csrf_token';
+const CSRF_HEADER = process.env.CSRF_HEADER_NAME ?? 'x-csrf-token';
+
+/** The CSRF cookie is readable on purpose, so the client can echo it in a header. */
+const csrfTokenOf = (response: request.Response): string =>
+  setCookieHeaders(response)
+    .find((value) => value.startsWith(`${CSRF_COOKIE}=`))
+    ?.split(';')[0]
+    .split('=')[1] as string;
+
 describe('Session auth (e2e)', () => {
   let app: INestApplication<App>;
   let users: Repository<User>;
@@ -149,7 +159,8 @@ describe('Session auth (e2e)', () => {
   });
 
   it('accepts /auth/me with the cookie and logs out cleanly', async () => {
-    const cookie = cookieHeader(await login().expect(200));
+    const loggedIn = await login().expect(200);
+    const cookie = cookieHeader(loggedIn);
 
     const me = await request(app.getHttpServer())
       .get('/auth/me')
@@ -160,6 +171,7 @@ describe('Session auth (e2e)', () => {
     await request(app.getHttpServer())
       .post('/auth/logout')
       .set('Cookie', cookie)
+      .set(CSRF_HEADER, csrfTokenOf(loggedIn))
       .expect(200);
 
     await request(app.getHttpServer())
@@ -177,6 +189,7 @@ describe('Session auth (e2e)', () => {
     await request(app.getHttpServer())
       .post('/auth/logout')
       .set('Cookie', cookieHeader(response))
+      .set(CSRF_HEADER, csrfTokenOf(response))
       .expect(200);
 
     expect(await store.findById(id)).toBeNull();

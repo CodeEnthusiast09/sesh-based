@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /** 32 bytes = 256 bits of entropy, well past any feasible guessing attack. */
 const TOKEN_BYTES = 32;
@@ -21,3 +21,16 @@ export const generateSessionId = (): { raw: string; hashed: string } => {
 };
 
 export const generateCsrfToken = (): string => randomToken();
+
+/**
+ * Compares two secrets without leaking, through timing, how much of the value
+ * matched. Both sides are hashed first so the buffers are always the same
+ * length, which avoids the early length check that would otherwise leak the
+ * token's size and would make timingSafeEqual throw on a mismatch.
+ */
+export const constantTimeEquals = (left: string, right: string): boolean => {
+  const digest = (value: string): Buffer =>
+    createHash('sha256').update(value).digest();
+
+  return timingSafeEqual(digest(left), digest(right));
+};
