@@ -47,6 +47,7 @@ clock has passed, confirm the owner still exists, slide the idle clock.
 | Password hashing | `modules/auth/password.service.ts` | `internal/auth/password.go` |
 | Expired-row sweep | `session-cleanup.service.ts` | `internal/session/cleanup.go` |
 | Rate limiting | `@nestjs/throttler` in `app.module.ts` | `internal/middleware/ratelimit.go` |
+| Trusting `X-Forwarded-For` | `app.set('trust proxy', ...)` in `app.setup.ts` | `SetTrustedProxies` in `internal/router/router.go` |
 
 ## Where they genuinely differ, and why
 
@@ -130,10 +131,42 @@ load balancer the effective limit is the configured value times the instance
 count. Moving the counters into Redis is what fixes that, and is worth doing
 before either is load balanced.
 
+## Client IP, and the one place the two defaults disagree
+
+Both limiters key on the client IP, and how each framework decides what that is
+turns out to be the sharpest difference between the two projects.
+
+`X-Forwarded-For` is the header a proxy adds to say who the real caller was. It
+is also just a header, so anyone can send one. That makes both possible
+behaviours wrong in a different way:
+
+- Ignore it while sitting behind a proxy, and every request arrives with the
+  proxy's address. The whole user base shares one bucket, so one person mistyping
+  a password locks out everyone. A self-inflicted denial of service.
+- Trust it unconditionally, and a caller sends a different fake value per request,
+  gets a fresh counter every time, and the limit does nothing at all.
+
+The only correct answer is conditional: trust the header **only** for connections
+coming from a proxy you own. `TRUSTED_PROXIES` (comma-separated IPs and CIDRs,
+empty by default) drives that in both projects, validated at boot in both so a
+typo fails the boot rather than silently trusting nothing.
+
+**The frameworks default in opposite directions, and Gin's default is the unsafe
+one.** Express trusts no proxy unless told to, so it ignores the header out of the
+box. Gin's default trusted list is `0.0.0.0/0`, meaning every caller on earth
+counts as a trusted proxy, so `c.ClientIP()` returns whatever the caller claimed
+until `SetTrustedProxies` says otherwise. Left alone, the Go rate limiter could be
+bypassed entirely by adding one header, with no proxy involved. Gin prints a
+startup warning about this and it is easy to scroll past.
+
+`proxy-throttle.e2e-spec.ts` on the Nest side asserts both directions and fails if
+either is wired the wrong way.
+
 ## Known gaps in both
 
 - Schema is created by `synchronize` / `AutoMigrate`, which is a development
   convenience. Deployed environments need versioned migrations.
-- `X-Forwarded-For` is not trusted, so the recorded IP is the proxy's address
-  behind a load balancer until that is configured. That also means the rate
-  limiter would key every request behind a proxy to the same bucket.
+- `TRUSTED_PROXIES` is empty by default. Behind a proxy it must be set, or every
+  request keys to the proxy's address and the whole user base shares one bucket.
+- The session record still stores the IP the request came from, so that field is
+  only as accurate as `TRUSTED_PROXIES` makes it.

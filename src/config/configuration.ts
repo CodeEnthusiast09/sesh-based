@@ -16,6 +16,9 @@ export const configuration = () => ({
     env: process.env.NODE_ENV,
     port: toNumber(process.env.PORT),
     corsOrigin: process.env.CORS_ORIGIN,
+    // Empty means trust nobody, so req.ip is the address the connection came
+    // from rather than whatever X-Forwarded-For the caller claimed.
+    trustedProxies: process.env.TRUSTED_PROXIES || undefined,
   },
   database: {
     host: process.env.DB_HOST,

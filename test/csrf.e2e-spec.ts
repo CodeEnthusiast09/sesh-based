@@ -1,9 +1,8 @@
-import { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 
 import { AppModule } from './../src/app.module';
@@ -39,7 +38,7 @@ const csrfTokenOf = (response: request.Response): string =>
   rawCookie(response, CSRF_COOKIE).split(';')[0].split('=')[1];
 
 describe('CSRF protection (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
   let users: Repository<User>;
 
   const password = 'correct-horse-battery';
@@ -53,7 +52,7 @@ describe('CSRF protection (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app);
     await app.init();
 

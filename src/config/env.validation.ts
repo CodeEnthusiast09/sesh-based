@@ -11,6 +11,7 @@ import {
   validateSync,
 } from 'class-validator';
 
+import { IsCidrList } from '../common/validators/is-cidr-list.validator';
 import { DURATION_REGEX } from './duration';
 
 const BOOLEAN_VALUES = ['true', 'false'];
@@ -29,6 +30,13 @@ export class EnvironmentVariables {
 
   @IsString()
   CORS_ORIGIN: string;
+
+  // Comma-separated IPs/CIDRs allowed to set X-Forwarded-For. Every entry is
+  // checked here so a typo fails the boot with the offending value named,
+  // rather than silently trusting nothing at runtime.
+  @IsOptional()
+  @IsCidrList()
+  TRUSTED_PROXIES?: string;
 
   @IsString()
   DB_HOST: string;

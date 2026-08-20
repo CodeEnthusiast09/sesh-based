@@ -1,9 +1,8 @@
-import { INestApplication } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import request from 'supertest';
-import { App } from 'supertest/types';
 import { Repository } from 'typeorm';
 
 import { AppModule } from './../src/app.module';
@@ -16,7 +15,7 @@ import { User } from './../src/modules/users/entities/user.entity';
 const authLimit = Number(process.env.AUTH_RATE_LIMIT_MAX);
 
 describe('Rate limiting (e2e)', () => {
-  let app: INestApplication<App>;
+  let app: NestExpressApplication;
   let users: Repository<User>;
 
   const password = 'correct-horse-battery';
@@ -27,7 +26,7 @@ describe('Rate limiting (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app);
     await app.init();
 
@@ -53,9 +52,6 @@ describe('Rate limiting (e2e)', () => {
     const attempt = () =>
       request(app.getHttpServer())
         .post('/auth/login')
-        // A distinct IP per test, since the limiter keys on it and registration
-        // above already spent one request.
-        .set('X-Forwarded-For', '203.0.113.10')
         .send({ email, password: 'wrong-password-here' });
 
     const statuses: number[] = [];
