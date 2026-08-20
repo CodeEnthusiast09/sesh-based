@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AppController } from './app.controller';
+import { createThrottlerStorage } from './common/throttler/throttler-storage.factory';
 import { configuration } from './config/configuration';
 import { validate } from './config/env.validation';
 import { AuthModule } from './modules/auth/auth.module';
@@ -35,9 +36,10 @@ import { AuthModule } from './modules/auth/auth.module';
     ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
+      useFactory: async (config: ConfigService) => ({
         // Default message leaks the exception class name to the client.
         errorMessage: 'Too many requests, please try again later',
+        storage: await createThrottlerStorage(config),
         throttlers: [
           {
             name: 'default',

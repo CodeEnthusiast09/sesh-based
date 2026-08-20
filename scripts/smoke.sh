@@ -7,6 +7,12 @@
 #   ./scripts/smoke.sh
 #
 # BASE_URL overrides the target. Exits non-zero on the first failed check.
+#
+# It spends about five requests against the credential endpoints, so running it
+# more than twice inside AUTH_RATE_LIMIT_TTL trips the limiter and every check
+# comes back 429. That is the limiter working, not a regression: wait out the
+# window, raise AUTH_RATE_LIMIT_MAX for the run, or clear the counters
+# (RATE_LIMIT_STORE=redis: redis-cli --scan --pattern 'throttle:*' | xargs redis-cli del).
 
 set -uo pipefail
 

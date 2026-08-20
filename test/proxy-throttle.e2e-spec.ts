@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/app.setup';
 import { User } from './../src/modules/users/entities/user.entity';
+import { resetThrottleCounters } from './reset-throttle-counters';
 
 // Run via `npm run test:e2e:throttle`, which sets AUTH_RATE_LIMIT_MAX low.
 const authLimit = Number(process.env.AUTH_RATE_LIMIT_MAX);
@@ -54,6 +55,10 @@ const loginAs = (app: NestExpressApplication, email: string, ip: string) =>
     .send({ email, password: 'wrong-password-here' });
 
 describe('X-Forwarded-For and rate limiting (e2e)', () => {
+  // Redis keeps a counter for the whole window, so without this a second run
+  // inside AUTH_RATE_LIMIT_TTL would start already blocked. No-op on memory.
+  beforeAll(resetThrottleCounters);
+
   it('is configured with a low limit for this run', () => {
     expect(authLimit).toBeGreaterThan(0);
     expect(authLimit).toBeLessThan(20);

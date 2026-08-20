@@ -47,6 +47,8 @@ clock has passed, confirm the owner still exists, slide the idle clock.
 | Password hashing | `modules/auth/password.service.ts` | `internal/auth/password.go` |
 | Expired-row sweep | `session-cleanup.service.ts` | `internal/session/cleanup.go` |
 | Rate limiting | `@nestjs/throttler` in `app.module.ts` | `internal/middleware/ratelimit.go` |
+| Shared rate limit counters | `common/throttler/redis-throttler.storage.ts` | `internal/middleware/counter_redis.go` |
+| Rate limit store factory | `common/throttler/throttler-storage.factory.ts` | `internal/middleware/counter_factory.go` |
 | Trusting `X-Forwarded-For` | `app.set('trust proxy', ...)` in `app.setup.ts` | `SetTrustedProxies` in `internal/router/router.go` |
 
 ## Where they genuinely differ, and why
@@ -126,10 +128,28 @@ by default rather than by someone remembering. Go uses a hand-rolled fixed-windo
 counter keyed by client IP, with a background sweep evicting finished windows so
 the map cannot grow forever.
 
-**Both are in-memory**, so each instance counts only its own traffic: behind a
-load balancer the effective limit is the configured value times the instance
-count. Moving the counters into Redis is what fixes that, and is worth doing
-before either is load balanced.
+**Where the counters live.** `RATE_LIMIT_STORE=memory|redis` in both, the same
+shape as `SESSION_STORE`, and in both the factory builds only the backend named.
+Memory counts per process, so four instances behind a load balancer enforce four
+times the configured limit between them, and a restart clears every window.
+Redis puts one shared counter behind all of them. Measured against two instances
+with a limit of 10: memory let 20 requests through, Redis let 10.
+
+Both Redis implementations increment with a Lua script rather than `INCR`
+followed by a separate `PEXPIRE`, because that pair can lose the race where two
+instances both see the counter appear and neither sets a TTL, leaving a key that
+never resets.
+
+Both **fail open** when the counter is unreachable: the request is served and the
+failure logged. Failing closed would turn a Redis blip into a total outage, which
+hands an attacker a bigger prize than the brute-force window they would otherwise
+get.
+
+Each subsystem opens its own Redis connection rather than sharing one, so the
+session store and the rate limiter stay independently switchable:
+`RATE_LIMIT_STORE=redis` with `SESSION_STORE=postgres` is a valid combination and
+needs no special case. The cost is a second connection pool when both are on
+Redis, which is the trade taken here deliberately.
 
 ## Client IP, and the one place the two defaults disagree
 
@@ -166,6 +186,8 @@ either is wired the wrong way.
 
 - Schema is created by `synchronize` / `AutoMigrate`, which is a development
   convenience. Deployed environments need versioned migrations.
+- Rate limit counters are shared only when `RATE_LIMIT_STORE=redis`. On `memory`
+  the effective limit is the configured value times the instance count.
 - `TRUSTED_PROXIES` is empty by default. Behind a proxy it must be set, or every
   request keys to the proxy's address and the whole user base shares one bucket.
 - The session record still stores the IP the request came from, so that field is

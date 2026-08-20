@@ -55,6 +55,7 @@ export const configuration = () => ({
     ),
   },
   rateLimit: {
+    store: process.env.RATE_LIMIT_STORE,
     ttlSeconds: parseDurationSeconds(process.env.RATE_LIMIT_TTL as string),
     max: toNumber(process.env.RATE_LIMIT_MAX),
     authTtlSeconds: parseDurationSeconds(

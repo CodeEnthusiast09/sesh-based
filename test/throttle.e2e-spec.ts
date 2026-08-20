@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/app.setup';
 import { User } from './../src/modules/users/entities/user.entity';
+import { resetThrottleCounters } from './reset-throttle-counters';
 
 // Run via `npm run test:e2e:throttle`, which sets AUTH_RATE_LIMIT_MAX low. The
 // main suite runs with the limiter effectively off, since it signs in far more
@@ -22,6 +23,7 @@ describe('Rate limiting (e2e)', () => {
   const email = `throttle-${randomUUID()}@task141.mil`;
 
   beforeAll(async () => {
+    await resetThrottleCounters();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();

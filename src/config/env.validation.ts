@@ -102,6 +102,9 @@ export class EnvironmentVariables {
   })
   SESSION_CLEANUP_INTERVAL: string;
 
+  @IsIn(['memory', 'redis'])
+  RATE_LIMIT_STORE: string;
+
   @Matches(DURATION_REGEX, { message: durationMessage('RATE_LIMIT_TTL') })
   RATE_LIMIT_TTL: string;
 

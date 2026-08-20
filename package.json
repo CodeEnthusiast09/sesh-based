@@ -17,12 +17,13 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
-    "test:e2e:postgres": "SESSION_STORE=postgres RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
-    "test:e2e:redis": "SESSION_STORE=redis RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
-    "test:e2e:stores": "npm run test:e2e:postgres && npm run test:e2e:redis && npm run test:e2e:throttle",
+    "test:e2e": "RATE_LIMIT_STORE=memory RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
+    "test:e2e:postgres": "SESSION_STORE=postgres RATE_LIMIT_STORE=memory RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
+    "test:e2e:redis": "SESSION_STORE=redis RATE_LIMIT_STORE=memory RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=100000 jest --config ./test/jest-e2e.json --testPathIgnorePatterns \"throttle\"",
+    "test:e2e:stores": "npm run test:e2e:postgres && npm run test:e2e:redis && npm run test:e2e:throttle && npm run test:e2e:throttle:redis",
     "smoke": "./scripts/smoke.sh",
-    "test:e2e:throttle": "RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=3 jest --config ./test/jest-e2e.json --testPathPatterns \"throttle\""
+    "test:e2e:throttle": "RATE_LIMIT_STORE=memory RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=3 jest --config ./test/jest-e2e.json --testPathPatterns \"throttle\"",
+    "test:e2e:throttle:redis": "RATE_LIMIT_STORE=redis RATE_LIMIT_MAX=100000 AUTH_RATE_LIMIT_MAX=3 jest --config ./test/jest-e2e.json --testPathPatterns \"throttle\" --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
