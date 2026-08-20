@@ -50,6 +50,7 @@ clock has passed, confirm the owner still exists, slide the idle clock.
 | Shared rate limit counters | `common/throttler/redis-throttler.storage.ts` | `internal/middleware/counter_redis.go` |
 | Rate limit store factory | `common/throttler/throttler-storage.factory.ts` | `internal/middleware/counter_factory.go` |
 | Trusting `X-Forwarded-For` | `app.set('trust proxy', ...)` in `app.setup.ts` | `SetTrustedProxies` in `internal/router/router.go` |
+| Fail-closed fault split | `common/throttler/rate-limiter-fault.error.ts` | `internal/middleware/counter_fault.go` |
 
 ## Where they genuinely differ, and why
 
@@ -144,6 +145,18 @@ Both **fail open** when the counter is unreachable: the request is served and th
 failure logged. Failing closed would turn a Redis blip into a total outage, which
 hands an attacker a bigger prize than the brute-force window they would otherwise
 get.
+
+That is deliberately narrower than "any error." An unreachable Redis is one
+failure mode; a script that Redis rejects (wrong type on the key, a Lua bug) is
+a different one, and it will not fix itself by retrying the way a dropped
+connection might. Both projects tell the two apart: `redis.Error` in Go and
+`ErrorReply` in Node mean the server was reached and complained, which is
+wrapped as `FaultError` / `RateLimiterFaultError` and left to **fail closed**
+instead, a loud 500 rather than a rate limiter that silently stopped limiting
+anything. Everything else (connection refused, timeout, pool exhaustion) still
+fails open. Confirmed live in both: seeding a counter key as the wrong Redis
+type returns 500 while an unrelated key keeps working, and stopping Redis
+outright still serves 200/401 as before.
 
 Each subsystem opens its own Redis connection rather than sharing one, so the
 session store and the rate limiter stay independently switchable:

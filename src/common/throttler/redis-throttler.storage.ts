@@ -1,7 +1,9 @@
 import { Logger, OnApplicationShutdown } from '@nestjs/common';
 import { ThrottlerStorage } from '@nestjs/throttler';
+import { ErrorReply } from 'redis';
 
 import type { RedisClient } from '../../modules/sessions/stores/redis-session.store';
+import { RateLimiterFaultError } from './rate-limiter-fault.error';
 
 const KEY_PREFIX = 'throttle:';
 
@@ -61,6 +63,13 @@ const toSeconds = (milliseconds: number): number =>
  * The fixed window here is deliberately simpler than the built-in storage's
  * per-hit decay: one INCR per request and one key that expires, which is also
  * exactly what the Go sibling does.
+ *
+ * Two failure modes, handled differently. Redis being unreachable fails open
+ * (the request is served, the failure logged): that is the case fail-open
+ * exists for. A response Redis sends back complaining about the script itself
+ * is a RateLimiterFaultError instead, which is left to propagate and comes
+ * back as a 500 through the global exception filter, because that failure
+ * will not go away on retry and should not be swallowed silently.
  */
 export class RedisThrottlerStorage
   implements ThrottlerStorage, OnApplicationShutdown
@@ -89,6 +98,16 @@ export class RedisThrottlerStorage
         timeToBlockExpire: toSeconds(timeToBlockExpire),
       };
     } catch (error) {
+      // ErrorReply means Redis was reached and ran the script, but complained
+      // (a Lua error, wrong arity, wrong type on the key). That is a bug in
+      // this script, not an outage, so it must not fail open the way a dropped
+      // connection or timeout does: rethrowing lets it reach the global
+      // exception filter and come back as a loud 500 instead of a limiter that
+      // silently stopped limiting anything.
+      if (error instanceof ErrorReply) {
+        throw new RateLimiterFaultError(error);
+      }
+
       // Fail open. Failing closed would turn a Redis blip into a total outage,
       // which hands an attacker a bigger prize than the brute-force window they
       // would otherwise get.
